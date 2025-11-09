@@ -68,7 +68,11 @@ def send_telegram_message(message):
     print(f"Sending message to {len(chat_ids)} users...")
     for chat_id in chat_ids:
         if not chat_id.strip(): continue
-        url = f"https{api.telegram.org/bot}{TELEGRAM_BOT_TOKEN}/sendMessage"
+        
+        # --- THIS IS THE FIXED URL ---
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        # -----------------------------
+
         payload = {'chat_id': chat_id.strip(), 'text': message, 'parse_mode': 'Markdown', 'disable_web_page_preview': True}
         try:
             requests.post(url, json=payload, timeout=5)
@@ -85,7 +89,6 @@ def check_croma(product, pincode):
         res = requests.post(url, headers=headers, json=payload, timeout=10)
         res.raise_for_status() 
         
-        # --- THIS IS THE NEW DEBUGGING LOGIC ---
         try:
             # Try to parse JSON normally
             data = res.json()
@@ -101,7 +104,6 @@ def check_croma(product, pincode):
             print(f"Status Code: {res.status_code}")
             print(f"Raw Response Text: {res.text}")
             print("--- END CROMA DEBUG ---")
-        # ----------------------------------------
             
     except Exception as e:
         print(f'Error checking Croma ({product["name"]}): {e}')
