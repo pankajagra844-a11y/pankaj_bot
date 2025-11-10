@@ -8,7 +8,7 @@ from urllib.parse import urlparse, parse_qs
 PINCODES_TO_CHECK = ["132001"]
 DATABASE_URL = os.getenv("DATABASE_URL")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_GROUP_ID = "-4789301236"  # Group chat ID
+TELEGRAM_GROUP_ID = "-4789301236"  # Telegram group ID
 CRON_SECRET = os.getenv("CRON_SECRET")
 
 # Amazon credentials
@@ -144,7 +144,7 @@ def check_croma(product, pincode):
     return None
 
 # ==================================
-# 🛍️ FLIPKART CHECKER
+# 🛍️ FLIPKART CHECKER (Improved)
 # ==================================
 def check_flipkart(product, pincode="132001"):
     try:
@@ -174,30 +174,34 @@ def check_flipkart(product, pincode="132001"):
             "flipkart_secure": "true"
         }
 
-        res = requests.post(
-            "https://2.rome.api.flipkart.com/api/4/page/fetch?cacheFirst=false",
-            headers=headers,
-            json=payload,
-            timeout=10
-        )
+        def make_request(timeout):
+            return requests.post(
+                "https://2.rome.api.flipkart.com/api/4/page/fetch?cacheFirst=false",
+                headers=headers,
+                json=payload,
+                timeout=timeout
+            )
+
+        try:
+            res = make_request(timeout=12)
+        except requests.exceptions.ReadTimeout:
+            print(f"[FLIPKART] ⚠️ Timeout for {product['name']}, retrying with longer timeout...")
+            res = make_request(timeout=20)
 
         data = res.json()
         body = json.dumps(data).lower()
 
-        if "out of stock" in body or "not available" in body or "unavailable" in body:
-            print(f"[FLIPKART] ❌ ({product['name']}) unavailable at {pincode}")
+        if any(k in body for k in ["out of stock", "not available", "unavailable"]):
+            print(f"[FLIPKART] ❌ ({product['name']}) not deliverable at {pincode}")
             return None
 
-        if "delivery by" in body or "in stock" in body or "delivers to" in body:
+        if any(k in body for k in ["delivery by", "get it by", "in stock", "delivers to"]):
             print(f"[FLIPKART] ✅ ({product['name']}) deliverable to {pincode}")
             return f"✅ *Flipkart*\n[{product['name']}]({product['affiliateLink'] or product['url']})"
 
-        print(f"[FLIPKART] ⚠️ Unknown stock status for {product['name']}")
+        print(f"[FLIPKART] ⚠️ Unknown stock pattern for {product['name']}")
         return None
 
-    except requests.exceptions.ReadTimeout:
-        print(f"[FLIPKART] ⚠️ Timeout while checking {product['name']}")
-        return None
     except Exception as e:
         print(f"[error] Flipkart check failed for {product['name']}: {e}")
         return None
@@ -284,7 +288,7 @@ def check_amazon(product):
             return f"✅ *Amazon*\n[{title}]({product['affiliateLink'] or product['url']})\n💰 {price}\n📦 {availability}"
 
         if "TooManyRequests" in str(data):
-            print(f"[AMAZON] ⚠️ Skipping {product['name']} (throttled).")
+            print(f"[AMAZON] ⚠️ Skipping ({product['storeType']}) {product['name']} (throttled).")
             return None
 
         print(f"[AMAZON] ⚠️ No stock info for {product['name']}")
