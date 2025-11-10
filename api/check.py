@@ -8,7 +8,7 @@ from urllib.parse import urlparse, parse_qs
 PINCODES_TO_CHECK = ["132001"]
 DATABASE_URL = os.getenv("DATABASE_URL")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_GROUP_ID = "-4789301236"  # your group id
+TELEGRAM_GROUP_ID = "-4789301236"  # Group chat ID
 CRON_SECRET = os.getenv("CRON_SECRET")
 
 # Amazon credentials
@@ -133,20 +133,12 @@ def check_croma(product, pincode):
     try:
         res = requests.post(url, headers=headers, json=payload, timeout=10)
         data = res.json()
-
-        lines = (
-            data.get("promise", {})
-            .get("suggestedOption", {})
-            .get("option", {})
-            .get("promiseLines", {})
-            .get("promiseLine", [])
-        )
-
+        lines = data.get("promise", {}).get("suggestedOption", {}).get("option", {}).get("promiseLines", {}).get("promiseLine", [])
         if lines:
-            print(f"[CROMA] ✅ ({product['storeType']}) {product['name']} ... deliverable to {pincode}")
+            print(f"[CROMA] ✅ ({product['name']}) deliverable to {pincode}")
             return f"✅ *Croma*\n[{product['name']}]({product['affiliateLink'] or product['url']})"
-
-        print(f"[CROMA] ❌ ({product['storeType']}) {product['name']} ... unavailable at {pincode}")
+        else:
+            print(f"[CROMA] ❌ ({product['name']}) unavailable at {pincode}")
     except Exception as e:
         print(f"[error] Croma check failed for {product['name']}: {e}")
     return None
@@ -176,7 +168,8 @@ def check_flipkart(product, pincode="132001"):
             ),
             "x-user-agent": (
                 "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36 FKUA/msite/0.0.3/msite/Mobile"
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 "
+                "Mobile Safari/537.36 FKUA/msite/0.0.3/msite/Mobile"
             ),
             "flipkart_secure": "true"
         }
@@ -191,17 +184,20 @@ def check_flipkart(product, pincode="132001"):
         data = res.json()
         body = json.dumps(data).lower()
 
-        if "out of stock" in body or "not available" in body:
+        if "out of stock" in body or "not available" in body or "unavailable" in body:
             print(f"[FLIPKART] ❌ ({product['name']}) unavailable at {pincode}")
             return None
 
-        if "delivery by" in body or "in stock" in body:
+        if "delivery by" in body or "in stock" in body or "delivers to" in body:
             print(f"[FLIPKART] ✅ ({product['name']}) deliverable to {pincode}")
             return f"✅ *Flipkart*\n[{product['name']}]({product['affiliateLink'] or product['url']})"
 
         print(f"[FLIPKART] ⚠️ Unknown stock status for {product['name']}")
         return None
 
+    except requests.exceptions.ReadTimeout:
+        print(f"[FLIPKART] ⚠️ Timeout while checking {product['name']}")
+        return None
     except Exception as e:
         print(f"[error] Flipkart check failed for {product['name']}: {e}")
         return None
@@ -288,7 +284,7 @@ def check_amazon(product):
             return f"✅ *Amazon*\n[{title}]({product['affiliateLink'] or product['url']})\n💰 {price}\n📦 {availability}"
 
         if "TooManyRequests" in str(data):
-            print(f"[AMAZON] ⚠️ Skipping ({product['storeType']}) {product['name']} (throttled).")
+            print(f"[AMAZON] ⚠️ Skipping {product['name']} (throttled).")
             return None
 
         print(f"[AMAZON] ⚠️ No stock info for {product['name']}")
