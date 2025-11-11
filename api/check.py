@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 PINCODES_TO_CHECK = ["132001"]
 DATABASE_URL = os.getenv("DATABASE_URL")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_GROUP_ID = "-4789301236"  # Telegram group ID
+TELEGRAM_GROUP_ID = "-4789301236" # Telegram group ID
 CRON_SECRET = os.getenv("CRON_SECRET")
 
 # Flipkart Proxy (AlwaysData)
@@ -68,7 +68,9 @@ class handler(BaseHTTPRequestHandler):
 # ==================================
 def get_products_from_db():
     print("[info] Connecting to database...")
-    conn = psycopg2.connect(DATABASE_URL)
+    # NOTE: psycopg2 should be installed if running this locally: pip install psycopg2-binary
+    # This line assumes DATABASE_URL is set in environment variables (Vercel/hosting environment).
+    conn = psycopg2.connect(DATABASE_URL) 
     cursor = conn.cursor()
     cursor.execute("SELECT name, url, product_id, store_type, affiliate_link FROM products")
     products = cursor.fetchall()
@@ -111,6 +113,81 @@ def send_telegram_message(message):
             print(f"[warn] Telegram send failed: {res.text}")
     except Exception as e:
         print(f"[error] Telegram error: {e}")
+
+# ==================================
+# 🦄 UNICORN CHECKER (iPhone 17, 256GB)
+# ==================================
+def check_unicorn():
+    """Checks stock for all iPhone 17 (256GB) variants at Unicorn Store."""
+    
+    # --- API CONFIG ---
+    BASE_URL = "https://fe01.beamcommerce.in/get_product_by_option_id"
+    HEADERS = {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "customer-id": "unicorn",
+        "origin": "https://shop.unicornstore.in",
+        "referer": "https://shop.unicornstore.in/",
+    }
+    
+    # Fixed product attributes for iPhone 17 (Category 456)
+    CATEGORY_ID = "456" 
+    FAMILY_ID = "94"
+    GROUP_IDS = "57,58"
+    STORAGE_256GB_ID = "250" # 256GB Option ID 
+
+    # Color variants to check (ID 57)
+    COLOR_VARIANTS = {
+        "Lavender": "313",
+        "Sage": "311",
+        "Mist Blue": "312",
+        "White": "314",
+        "Black": "315",
+    }
+    
+    available_messages = []
+    
+    for color_name, color_id in COLOR_VARIANTS.items():
+        variant_name = f"iPhone 17 {color_name} 256GB"
+        
+        payload = {
+            "category_id": CATEGORY_ID,
+            "family_id": FAMILY_ID,
+            "group_ids": GROUP_IDS,
+            "option_ids": f"{color_id},{STORAGE_256GB_ID}"
+        }
+
+        try:
+            res = requests.post(BASE_URL, headers=HEADERS, json=payload, timeout=10)
+            res.raise_for_status()
+            data = res.json()
+            
+            product_data = data.get("data", {}).get("product", {})
+            quantity = product_data.get("quantity", 0)
+            
+            # Format price and SKU
+            price = f"₹{int(product_data.get('price', 0)):,}" if product_data.get('price') else "N/A"
+            sku = product_data.get("sku", "N/A")
+            
+            # Use the main product page URL for linking
+            product_url = "https://shop.unicornstore.in/iphone-17" 
+            
+            if int(quantity) > 0:
+                print(f"[UNICORN] ✅ {variant_name} is IN STOCK ({quantity} units)")
+                message = (
+                    f"✅ *Unicorn*\n"
+                    f"[{variant_name} - {sku}]({product_url})"
+                    f"\n💰 Price: {price}, Qty: {quantity}"
+                )
+                available_messages.append(message)
+            else:
+                dispatch_note = product_data.get("custom_column_4", "Out of Stock").strip()
+                print(f"[UNICORN] ❌ {variant_name} unavailable: {dispatch_note}")
+                
+        except Exception as e:
+            print(f"[error] Unicorn check failed for {variant_name}: {e}")
+    
+    return available_messages
 
 # ==================================
 # 🛒 CROMA CHECKER
@@ -266,16 +343,31 @@ def check_amazon(product):
         return None
 
 # ==================================
-# 🚀 MAIN LOGIC
+# 🚀 MAIN LOGIC (MODIFIED to include Unicorn)
 # ==================================
 def main_logic():
     start_time = time.time()
     print("[info] Starting stock check...")
     products = get_products_from_db()
     in_stock = []
-    croma_count = flip_count = amazon_count = 0
-    croma_total = flip_total = amazon_total = 0
+    
+    # Initialize all counters, including Unicorn
+    croma_count = flip_count = amazon_count = unicorn_count = 0
+    croma_total = flip_total = amazon_total = unicorn_total = 0
 
+    # ----------------------------------------------------
+    # NEW: Check Unicorn stock separately for iPhone 17 variants
+    # ----------------------------------------------------
+    unicorn_results = check_unicorn()
+    # We checked 5 variants total (all are 256GB)
+    unicorn_total = 5 
+    unicorn_count = len(unicorn_results)
+    if unicorn_results:
+        in_stock.extend(unicorn_results)
+    
+    # ----------------------------------------------------
+    # EXISTING: Loop through DB products
+    # ----------------------------------------------------
     for product in products:
         result = None
         if product["storeType"] == "croma":
@@ -304,10 +396,12 @@ def main_logic():
     duration = round(time.time() - start_time, 2)
     timestamp = datetime.datetime.now().strftime("%d %b %Y %I:%M %p")
 
+    # Final Summary (Unicorn line added)
     summary = (
         f"🟢 *Croma:* {croma_count}/{croma_total}\n"
         f"🟣 *Flipkart:* {flip_count}/{flip_total}\n"
         f"🟡 *Amazon:* {amazon_count}/{amazon_total}\n"
+        f"🦄 *Unicorn:* {unicorn_count}/{unicorn_total} (256GB)\n"
         f"📦 *Total:* {len(in_stock)} available\n"
         f"🕒 *Checked:* {timestamp}\n"
         f"⏱ *Time taken:* {duration}s"
