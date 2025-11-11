@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 # 🔧 CONFIGURATION
 # ==================================
 PINCODES_TO_CHECK = ["132001"]
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DIRECT_URL")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_GROUP_ID = "-4789301236" # Telegram group ID
 CRON_SECRET = os.getenv("CRON_SECRET")
