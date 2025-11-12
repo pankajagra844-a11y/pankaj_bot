@@ -238,7 +238,7 @@ def check_croma(product, pincode):
 
         if lines:
             print(f"[CROMA] ✅ {product['name']} deliverable to {pincode}")
-            return f"✅ *Croma*\n[{product['name']}]({product['affiliateLink'] or product['url']})"
+            return f"✅ *Croma*\n[{product['name']}]({product['affiliateLink'] or product['url']} deliverable to {pincode})"
 
         print(f"[CROMA] ❌ {product['name']} unavailable at {pincode}")
     except Exception as e:
@@ -267,7 +267,7 @@ def check_flipkart(product, pincode="132001"):
             price = listing.get("pricing", {}).get("finalPrice", {}).get("decimalValue", None)
             print(f"[FLIPKART] ✅ {product['name']} deliverable to {pincode}")
             return (
-                f"✅ *Flipkart*\n[{product['name']}]({product['affiliateLink'] or product['url']})"
+                f"✅ *Flipkart*\n[{product['name']}]({product['affiliateLink'] or product['url']} deliverable to {pincode})"
                 + (f"\n💰 Price: ₹{price}" if price else "")
             )
 
