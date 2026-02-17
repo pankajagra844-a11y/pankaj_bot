@@ -122,74 +122,75 @@ def send_telegram_message(message):
 def check_unicorn():
     """Checks stock for all iPhone 17 (256GB) variants at Unicorn Store."""
     
-    # --- API CONFIG ---
-    BASE_URL = "https://fe01.beamcommerce.in/get_product_by_option_id"
-    HEADERS = {
-        "accept": "application/json, text/plain, */*",
-        "content-type": "application/json",
-        "customer-id": "unicorn",
-        "origin": "https://shop.unicornstore.in",
-        "referer": "https://shop.unicornstore.in/",
-    }
+    # # --- API CONFIG ---
+    # BASE_URL = "https://fe01.beamcommerce.in/get_product_by_option_id"
+    # HEADERS = {
+    #     "accept": "application/json, text/plain, */*",
+    #     "content-type": "application/json",
+    #     "customer-id": "unicorn",
+    #     "origin": "https://shop.unicornstore.in",
+    #     "referer": "https://shop.unicornstore.in/",
+    # }
     
-    # Fixed product attributes for iPhone 17 (Category 456)
-    CATEGORY_ID = "456" 
-    FAMILY_ID = "94"
-    GROUP_IDS = "57,58"
-    STORAGE_256GB_ID = "250" # 256GB Option ID 
+    # # Fixed product attributes for iPhone 17 (Category 456)
+    # CATEGORY_ID = "456" 
+    # FAMILY_ID = "94"
+    # GROUP_IDS = "57,58"
+    # STORAGE_256GB_ID = "250" # 256GB Option ID 
 
-    # Color variants to check (ID 57)
-    COLOR_VARIANTS = {
-        "Lavender": "313",
-        "Sage": "311",
-        "Mist Blue": "312",
-        "White": "314",
-        "Black": "315",
-    }
+    # # Color variants to check (ID 57)
+    # COLOR_VARIANTS = {
+    #     "Lavender": "313",
+    #     "Sage": "311",
+    #     "Mist Blue": "312",
+    #     "White": "314",
+    #     "Black": "315",
+    # }
     
-    available_messages = []
+    # available_messages = []
     
-    for color_name, color_id in COLOR_VARIANTS.items():
-        variant_name = f"iPhone 17 {color_name} 256GB"
+    # for color_name, color_id in COLOR_VARIANTS.items():
+    #     variant_name = f"iPhone 17 {color_name} 256GB"
         
-        payload = {
-            "category_id": CATEGORY_ID,
-            "family_id": FAMILY_ID,
-            "group_ids": GROUP_IDS,
-            "option_ids": f"{color_id},{STORAGE_256GB_ID}"
-        }
+    #     payload = {
+    #         "category_id": CATEGORY_ID,
+    #         "family_id": FAMILY_ID,
+    #         "group_ids": GROUP_IDS,
+    #         "option_ids": f"{color_id},{STORAGE_256GB_ID}"
+    #     }
 
-        try:
-            res = requests.post(BASE_URL, headers=HEADERS, json=payload, timeout=10)
-            res.raise_for_status()
-            data = res.json()
+    #     try:
+    #         res = requests.post(BASE_URL, headers=HEADERS, json=payload, timeout=10)
+    #         res.raise_for_status()
+    #         data = res.json()
             
-            product_data = data.get("data", {}).get("product", {})
-            quantity = product_data.get("quantity", 0)
+    #         product_data = data.get("data", {}).get("product", {})
+    #         quantity = product_data.get("quantity", 0)
             
-            # Format price and SKU
-            price = f"₹{int(product_data.get('price', 0)):,}" if product_data.get('price') else "N/A"
-            sku = product_data.get("sku", "N/A")
+    #         # Format price and SKU
+    #         price = f"₹{int(product_data.get('price', 0)):,}" if product_data.get('price') else "N/A"
+    #         sku = product_data.get("sku", "N/A")
             
-            # Use the main product page URL for linking
-            product_url = "https://shop.unicornstore.in/iphone-17" 
+    #         # Use the main product page URL for linking
+    #         product_url = "https://shop.unicornstore.in/iphone-17" 
             
-            if int(quantity) > 0:
-                print(f"[UNICORN] ✅ {variant_name} is IN STOCK ({quantity} units)")
-                message = (
-                    f"✅ *Unicorn*\n"
-                    f"[{variant_name} - {sku}]({product_url})"
-                    f"\n💰 Price: {price}, Qty: {quantity}"
-                )
-                available_messages.append(message)
-            else:
-                dispatch_note = product_data.get("custom_column_4", "Out of Stock").strip()
-                print(f"[UNICORN] ❌ {variant_name} unavailable: {dispatch_note}")
+    #         if int(quantity) > 0:
+    #             print(f"[UNICORN] ✅ {variant_name} is IN STOCK ({quantity} units)")
+    #             message = (
+    #                 f"✅ *Unicorn*\n"
+    #                 f"[{variant_name} - {sku}]({product_url})"
+    #                 f"\n💰 Price: {price}, Qty: {quantity}"
+    #             )
+    #             available_messages.append(message)
+    #         else:
+    #             dispatch_note = product_data.get("custom_column_4", "Out of Stock").strip()
+    #             print(f"[UNICORN] ❌ {variant_name} unavailable: {dispatch_note}")
                 
-        except Exception as e:
-            print(f"[error] Unicorn check failed for {variant_name}: {e}")
+    #     except Exception as e:
+    #         print(f"[error] Unicorn check failed for {variant_name}: {e}")
     
-    return available_messages
+    # return available_messages
+    pass
 
 # ==================================
 # 🛒 CROMA CHECKER
